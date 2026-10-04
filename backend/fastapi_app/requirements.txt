@@ -1,7 +1,9 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+sqlalchemy==2.1.1
 pymysql
-python-dotenv
-pydantic
-PyJWT
+python-dotenv==1.2.3
+pydantic==2.13.5
+PyJWT==2.15.1
+passlib==1.7.4
+email-validator==2.3.0

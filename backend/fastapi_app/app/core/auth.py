@@ -1,35 +1,9 @@
-import os
-import sys
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 import jwt
 
-
-# ---------------------------------------------------------
-# Locate Django project
-# ---------------------------------------------------------
-
-DJANGO_PROJECT_PATH = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "..",
-        "..",
-        "django_app",
-    )
-)
-
-if DJANGO_PROJECT_PATH not in sys.path:
-    sys.path.insert(0, DJANGO_PROJECT_PATH)
-
-
-# ---------------------------------------------------------
-# Import Django SECRET_KEY directly
-# ---------------------------------------------------------
-
-from config.settings import SECRET_KEY as DJANGO_SECRET_KEY
+from app.core.config import settings
 
 
 # ---------------------------------------------------------
@@ -42,12 +16,17 @@ security = HTTPBearer()
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
+    """
+    Validate the JWT access token and return the authenticated
+    Django user ID.
+    """
+
     token = credentials.credentials
 
     try:
         payload = jwt.decode(
             token,
-            DJANGO_SECRET_KEY,
+            settings.SECRET_KEY,
             algorithms=["HS256"],
         )
 

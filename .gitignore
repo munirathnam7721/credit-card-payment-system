@@ -32,3 +32,5 @@ htmlcov/
 
 # Logs
 *.log
+# Local database dump
+/credit_card_db.sql

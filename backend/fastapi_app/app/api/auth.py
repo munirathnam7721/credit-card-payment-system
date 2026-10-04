@@ -4,16 +4,49 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
-from django.contrib.auth.hashers import check_password
-
+from app.core.config import settings
 from app.core.database import get_db
 from app.schemas.auth import LoginRequest, LoginResponse
-from config.settings import SECRET_KEY as DJANGO_SECRET_KEY
 
 
 router = APIRouter()
 
+
+# ---------------------------------------------------------
+# Password Hashing
+# ---------------------------------------------------------
+
+pwd_context = CryptContext(
+    schemes=["django_pbkdf2_sha256"],
+    deprecated="auto",
+)
+
+
+# ---------------------------------------------------------
+# Verify Django Password
+# ---------------------------------------------------------
+
+def verify_password(
+    plain_password: str,
+    hashed_password: str,
+) -> bool:
+    """
+    Verify a plain password against a Django PBKDF2 hash.
+    """
+    try:
+        return pwd_context.verify(
+            plain_password,
+            hashed_password,
+        )
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------
+# Login
+# ---------------------------------------------------------
 
 @router.post(
     "/login",
@@ -24,30 +57,37 @@ def login(
     login_data: LoginRequest,
     db: Session = Depends(get_db),
 ):
+    # Find user from the shared MySQL database
     user = db.execute(
-        text("""
+        text(
+            """
             SELECT id, email, password, is_active
             FROM users_user
             WHERE email = :email
-        """),
+            LIMIT 1
+            """
+        ),
         {
             "email": login_data.email.lower().strip(),
         },
     ).mappings().first()
 
+    # User does not exist
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
         )
 
+    # User account is inactive
     if not user["is_active"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive.",
         )
 
-    if not check_password(
+    # Verify password
+    if not verify_password(
         login_data.password,
         user["password"],
     ):
@@ -55,6 +95,10 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
         )
+
+    # -----------------------------------------------------
+    # Create JWT access token
+    # -----------------------------------------------------
 
     now = datetime.now(timezone.utc)
 
@@ -69,7 +113,7 @@ def login(
 
     access_token = jwt.encode(
         payload,
-        DJANGO_SECRET_KEY,
+        settings.SECRET_KEY,
         algorithm="HS256",
     )
 
