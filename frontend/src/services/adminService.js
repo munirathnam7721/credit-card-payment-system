@@ -27,3 +27,20 @@ export const exportTransactionsCSV = async () => {
 
   return response.data;
 };
+
+export const updateAdminCardStatus = async (cardId, isBlocked) => {
+  const response = await api.patch(`/admin/cards/${cardId}/block/`, {
+    is_blocked: isBlocked,
+  });
+
+  return response.data;
+};
+
+export const updateAdminCardLimit = async (cardId, creditLimit) => {
+  const response = await api.patch(`/admin/cards/${cardId}/limit/`, {
+    credit_limit: creditLimit,
+  });
+
+  return response.data;
+};
+
